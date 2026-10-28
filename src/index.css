@@ -1,0 +1,53 @@
+@import 'tailwindcss';
+
+/* Tema por variáveis: claro/escuro e paletas. Contraste verificado manualmente (texto sobre fundo ≥ 4.5:1). */
+:root {
+  --bg: #f7f7fb;
+  --surface: #ffffff;
+  --text: #1b1b2a;
+  --muted: #55556b;
+  --border: #dcdce8;
+  --accent: #4f46e5;
+  --accent-text: #ffffff;
+  --ok: #0b7a45;
+  --warn: #9a5b00;
+  --bad: #b3261e;
+}
+:root[data-palette='verde'] { --accent: #0f766e; }
+:root[data-palette='ambar'] { --accent: #b45309; }
+:root[data-theme='dark'] {
+  --bg: #12121a;
+  --surface: #1c1c28;
+  --text: #ececf6;
+  --muted: #a8a8c0;
+  --border: #33334a;
+  --accent: #8b8cf8;
+  --accent-text: #11111a;
+  --ok: #52d68f;
+  --warn: #f0b351;
+  --bad: #ff8a80;
+}
+:root[data-theme='dark'][data-palette='verde'] { --accent: #4fd1c5; }
+:root[data-theme='dark'][data-palette='ambar'] { --accent: #f6ad55; }
+
+html { color-scheme: light dark; }
+:root[data-theme='light'] { color-scheme: light; }
+:root[data-theme='dark'] { color-scheme: dark; }
+
+body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, 'Segoe UI', Roboto, sans-serif; line-height: 1.55; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem; }
+.btn { background: var(--accent); color: var(--accent-text); border-radius: 10px; padding: 0.6rem 1rem; font-weight: 600; min-height: 44px; border: 0; cursor: pointer; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.muted { color: var(--muted); }
+.input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.8rem; min-height: 44px; width: 100%; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.bar { height: 10px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.bar > div { height: 100%; background: var(--accent); }
+.anim .bar > div { transition: width 0.4s ease; }
+.anim .fade { animation: fade 0.25s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .anim .bar > div, .anim .fade { transition: none; animation: none; } }
+pre.prompt { white-space: pre-wrap; font-family: inherit; font-size: 1.15rem; margin: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
