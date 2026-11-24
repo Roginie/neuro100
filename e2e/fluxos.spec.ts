@@ -145,7 +145,7 @@ test('importação de arquivo inválido é recusada', async ({ page }) => {
   await expect(page.getByTestId('settings-msg')).toContainText('recusada')
 })
 
-for (const rota of ['/', '/treino', '/avaliacao', '/biblioteca', '/estatisticas', '/explicacoes', '/referencias', '/configuracoes']) {
+for (const rota of ['/', '/treino', '/avaliacao', '/biblioteca', '/revisoes', '/estatisticas', '/explicacoes', '/referencias', '/configuracoes']) {
   for (const scheme of ['light', 'dark'] as const) {
     test(`acessibilidade (axe) ${rota} ${scheme}`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme })
@@ -163,4 +163,73 @@ test('responsividade: sem rolagem horizontal', async ({ page }) => {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
     expect(overflow, rota).toBe(false)
   }
+})
+
+test('revisão espaçada: exercício agenda, vencida aparece e a sessão grava tentativas de revisão', async ({ page }) => {
+  await page.goto('/#/revisoes')
+  await expect(page.getByTestId('spaced-reviews')).toContainText('Nada agendado ainda')
+
+  // um exercício concluído (explicação completa = nota "Again") agenda a competência
+  await page.goto('/#/treino')
+  await page.getByRole('button', { name: 'Iniciar sessão' }).click()
+  await page.getByRole('button', { name: 'Começar' }).click()
+  await page.getByRole('button', { name: 'Ver explicação completa' }).click()
+  await expect(page.getByTestId('explanation')).toBeVisible()
+
+  await page.goto('/#/revisoes')
+  await page.reload()
+  await expect(page.getByTestId('due-count')).toContainText('Nenhuma revisão vencida')
+  await expect(page.getByTestId('upcoming-list')).toContainText('Sequências')
+
+  // simula a passagem do tempo: vence o cartão direto no IndexedDB
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open('neuro100')
+        open.onerror = () => reject(open.error)
+        open.onsuccess = () => {
+          const db = open.result
+          const tx = db.transaction('reviews', 'readwrite')
+          const store = tx.objectStore('reviews')
+          const get = store.getAll()
+          get.onsuccess = () => {
+            for (const r of get.result) store.put({ ...r, card: { ...r.card, due: Date.now() - 1000 } })
+          }
+          tx.oncomplete = () => {
+            db.close()
+            resolve()
+          }
+          tx.onerror = () => reject(tx.error)
+        }
+      }),
+  )
+  await page.reload()
+  await expect(page.getByTestId('due-count')).toContainText('1 competência')
+  await expect(page.getByTestId('due-list')).toContainText('Sequências')
+
+  await page.getByTestId('start-review').click()
+  // a sessão de treino acima ficou aberta: o app pergunta em vez de descartá-la sem avisar
+  await expect(page.getByTestId('review-conflict')).toBeVisible()
+  await page.getByRole('button', { name: 'Descartar a sessão e revisar' }).click()
+  await page.getByRole('button', { name: 'Começar' }).click()
+  await page.getByRole('button', { name: 'Ver explicação completa' }).click()
+  await expect(page.getByTestId('explanation')).toBeVisible()
+
+  const kinds = await page.evaluate(
+    () =>
+      new Promise<string[]>((resolve, reject) => {
+        const open = indexedDB.open('neuro100')
+        open.onerror = () => reject(open.error)
+        open.onsuccess = () => {
+          const db = open.result
+          const get = db.transaction('attempts').objectStore('attempts').getAll()
+          get.onsuccess = () => {
+            db.close()
+            resolve(get.result.map((a: { kind: string }) => a.kind))
+          }
+        }
+      }),
+  )
+  expect(kinds).toContain('practice')
+  expect(kinds).toContain('review')
 })

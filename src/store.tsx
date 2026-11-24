@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import type { ReviewState } from './domain/review'
 import type { AssessmentResult, Attempt, SessionRecord, Settings } from './domain/types'
-import { allAssessments, allAttempts, allSessions, DEFAULT_SETTINGS, loadSettings, saveSettings } from './storage/db'
+import { allAssessments, allAttempts, allReviews, allSessions, DEFAULT_SETTINGS, loadSettings, saveSettings } from './storage/db'
 
 interface Data {
   ready: boolean
@@ -8,6 +9,7 @@ interface Data {
   attempts: Attempt[]
   sessions: SessionRecord[]
   assessments: AssessmentResult[]
+  reviews: ReviewState[]
   refresh: () => Promise<void>
   updateSettings: (s: Settings) => Promise<void>
 }
@@ -35,17 +37,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
     attempts: [],
     sessions: [],
     assessments: [],
+    reviews: [],
   })
 
   const refresh = useCallback(async () => {
-    const [settings, attempts, sessions, assessments] = await Promise.all([
+    const [settings, attempts, sessions, assessments, reviews] = await Promise.all([
       loadSettings(),
       allAttempts(),
       allSessions(),
       allAssessments(),
+      allReviews(),
     ])
     applyTheme(settings)
-    setState({ ready: true, settings, attempts, sessions, assessments })
+    setState({ ready: true, settings, attempts, sessions, assessments, reviews })
   }, [])
 
   useEffect(() => {

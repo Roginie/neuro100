@@ -14,7 +14,7 @@ Cumprimento dos critérios de domínio de uma trilha (ver *Domínio*). Não é i
 `exercícios corretos na 1ª tentativa e sem dicas ÷ exercícios concluídos × 100`. A conclusão de um exercício é o último registro dele na sessão. Desistir (ver explicação completa) conta como concluído e não independente.
 
 ## C. Retenção observada
-`revisões corretas sem consulta ÷ total de revisões válidas × 100`. Só terá dados após a Fase 2 (revisões espaçadas). Hoje exibe "—".
+`revisões corretas sem consulta ÷ total de revisões válidas × 100`. Conta as tentativas feitas em sessões de revisão (`kind = review`), agendadas pelo FSRS. Exibe "—" até haver amostra mínima.
 
 ## D. Evolução individual
 Entre duas avaliações (forma A × B): `antes`, `agora`, diferença absoluta em pontos percentuais, diferença percentual **somente se a base > 0**, número de questões, intervalo em dias. Aviso se alguma tem < 10 itens. As formas são equivalentes por construção, **sem calibração**: diferenças pequenas podem ser acaso ou diferença de dificuldade entre formas.
@@ -28,7 +28,7 @@ Critérios padrão (hipótese de implementação, configuráveis no código `DEF
 - ≥ 80% corretos sem dicas nesses exercícios;
 - ≥ 2 revisões corretas sem dicas feitas ≥ 7 dias após a primeira prática.
 
-`progresso% = média(min(1, n/8), min(1, precisão/80), min(1, revisões/2)) × 100`. Como as revisões só existem na Fase 2, hoje nenhuma competência chega a 100%.
+`progresso% = média(min(1, n/8), min(1, precisão/80), min(1, revisões/2)) × 100`. As revisões vêm das sessões de revisão espaçada; sem elas, nenhuma competência chega a 100%.
 
 ## G. Transferência
 `acertos em exercícios de transferência ÷ total` — indicador separado, disponível na Fase 3.

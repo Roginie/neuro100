@@ -65,7 +65,7 @@ export default function Dashboard() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Metric label="Precisão" r={precision(practice)} def="corretas ÷ respostas válidas (treino)" />
         <Metric label="Resolução independente" r={independentResolution(practice)} def="corretos na 1ª tentativa, sem dicas ÷ concluídos" />
-        <Metric label="Retenção" r={retention(attempts)} def="revisões corretas sem consulta ÷ revisões (Fase 2)" />
+        <Metric label="Retenção" r={retention(attempts)} def="revisões corretas sem consulta ÷ revisões" />
         <Metric label="Transferência" r={transfer(attempts)} def="acertos em problemas novos (Fase 3)" />
       </div>
 

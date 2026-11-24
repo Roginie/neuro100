@@ -18,7 +18,7 @@ Legenda de leitura: **verificada** (conteúdo da fonte lido), **parcial** (lido 
 | Tipo de evidência | Meta-análise: 242 estudos, 1.619 efeitos, 169.179 participantes |
 | Resultados principais | d médio geral = 0,56. Prática distribuída d = 0,85; recuperação d = 0,74 (maiores efeitos). Recuperação **com feedback** supera sem feedback. |
 | Limitações | 93% dos desfechos eram superficiais/factuais; transferência distante com efeito menor (0,39 vs 0,61 próxima); 74% das medidas feitas em ≤ 1 dia (pouca evidência de retenção longa); heterogeneidade alta (I² = 85%); estudos de alta habilidade escassos; divisão em categorias de eficácia é arbitrária (segundo os autores). |
-| Aplicação na plataforma | Exercícios exigem produzir a resposta (não só reconhecer); feedback explicativo após cada tentativa; prática espalhada em sessões curtas; revisões espaçadas (Fase 2). **Cautela:** os resultados vêm sobretudo de aprendizagem factual; para raciocínio complexo o app trata a eficácia como hipótese a ser observada nos próprios dados do usuário. |
+| Aplicação na plataforma | Exercícios exigem produzir a resposta (não só reconhecer); feedback explicativo após cada tentativa; prática espalhada em sessões curtas; revisões espaçadas agendadas pelo FSRS (Fase 2, ver §FSRS). **Cautela:** os resultados vêm sobretudo de aprendizagem factual; para raciocínio complexo o app trata a eficácia como hipótese a ser observada nos próprios dados do usuário. |
 
 ## 2. Dunlosky et al. (2013)
 
@@ -96,8 +96,18 @@ Cada uma é uma decisão de produto, a ser avaliada com dados do próprio uso:
 | Mínimo de 10 itens para "confiabilidade" | aviso, não teste estatístico | Substituir por análise adequada quando houver dados suficientes |
 | Itens autorais e formas A/B | equivalência por construção | Sem calibração psicométrica; formas podem diferir em dificuldade |
 
+## FSRS (revisão espaçada, Fase 2)
+
+| Item | Conteúdo |
+|---|---|
+| Fonte consultada | Documentação do algoritmo (wiki `open-spaced-repetition/awesome-fsrs`, "The Algorithm", versão FSRS-6, 21 parâmetros) e o pacote oficial `ts-fsrs@6.0.0` (MIT). |
+| O que foi verificado | Os 21 parâmetros padrão do pacote coincidem com os da documentação; as estabilidades iniciais (0,212 / 1,2931 / 2,3065 / 8,2956 dias) estão em testes automatizados. A documentação consultada traz a curva de esquecimento e a revisão no mesmo dia do FSRS-6, mas as demais fórmulas aparecem de versões anteriores; por isso o app usa a implementação de referência em vez de reescrever as fórmulas. |
+| O que NÃO foi verificado | Que o FSRS funcione bem para **habilidades de raciocínio**. Ele foi desenhado para memória de itens. Aqui o cartão é uma competência e os exercícios são gerados de novo a cada vez. Isso é uma **adaptação sem validação**. |
+| Aplicação na plataforma | Retenção-alvo de 90% (padrão), sem aleatorização, sem passos em minutos. Nota por exercício: Good / Hard / Again conforme dicas e tentativas (hipótese de implementação). Parâmetros não otimizados com os dados da usuária. |
+| Como avaliar | A retenção observada (revisões corretas sem consulta) e o histórico em Revisões mostram, com os próprios dados, se os intervalos fazem sentido. Se a retenção observada ficar muito abaixo de 90%, os intervalos estão longos demais. |
+
 ## Pendências da revisão bibliográfica
 
 1. Ler Dunlosky et al. (2013), Nature Reviews Psychology (2022) e BJSM (2025).
-2. Para a Fase 2: documentação do FSRS (parâmetros e quando é adequado a habilidades de raciocínio, que diferem de memorização de fatos).
+2. FSRS: documentação lida (ver §FSRS). Permanece em aberto se ele é adequado a habilidades de raciocínio; só os dados de uso podem indicar isso.
 3. Buscar evidências sobre transferência de raciocínio lógico e sobre autoexplicação em adultos com pouco conhecimento prévio.

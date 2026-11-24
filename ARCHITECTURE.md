@@ -28,8 +28,9 @@ e2e/                  Playwright (desktop + Pixel 7)
 | `assessments` | id | resultado por competência, `isBaseline`, versão do banco |
 | `settings` | `'settings'` | tema, paleta, animações, duração, inatividade, limiares adaptativos |
 | `active` | `'current'` | sessão em andamento (relógio, fila, níveis) para retomada |
+| `reviews` (v2) | competência | cartão FSRS da competência (estabilidade, dificuldade, próxima revisão, estado), nº de revisões, data de aprendizado, última revisão e último resultado (`again/hard/good`) |
 
-Campos de revisão espaçada (data de aprendizado, última revisão, resultado, dificuldade percebida, próxima revisão) entram na migração de versão 2 (Fase 2).
+A versão 2 do banco só **adiciona** a store `reviews`; dados da v1 são preservados (testado). O backup passou à versão 2 e continua aceitando arquivos v1 (sem `reviews`). A dificuldade percebida pela usuária **não** foi implementada (ver limitações).
 
 ## Decisões
 1. **Domínio puro e determinístico.** Exercícios gerados usam PRNG com semente; o id codifica nível e semente, então a sessão retomada reconstrói o mesmo exercício.
@@ -45,11 +46,12 @@ Campos de revisão espaçada (data de aprendizado, última revisão, resultado, 
 - **GitHub Pages é público.** Repositório privado não torna o site privado (ver `SCIENTIFIC_FOUNDATIONS.md` §8). Os dados do usuário não estão no repositório.
 - **IndexedDB pode ser apagado pelo navegador** (limpeza de dados do site, modo privado). Faça backup manual periodicamente.
 - Bancos de itens pequenos (22 itens por avaliação, 2 formas A/B alternadas); formas não calibradas.
-- **Não implementado ainda:** revisão espaçada/FSRS, módulos 3–6 completos, avaliações de 7–90 dias com bancos maiores, testes de transferência, PWA/offline, relatórios. Ver roadmap abaixo.
+- **Revisão espaçada (Fase 2, implementada) é uma adaptação não validada.** O FSRS modela memória de itens; aqui o cartão é uma *competência* e cada exercício concluído é uma revisão dela (os exercícios mudam a cada vez). Parâmetros padrão do pacote `ts-fsrs@6.0.0`, sem otimização com dados da usuária. Nota por exercício (hipótese de implementação): acerto na 1ª tentativa e sem dicas = Good; acerto com dica ou nova tentativa = Hard; erro ou explicação completa = Again; Easy nunca é automático. Sem passos de aprendizagem em minutos (`enable_short_term: false`) e sem aleatorização (`enable_fuzz: false`): o menor intervalo é de 1 dia e o agendamento é reproduzível. A API usada (`next`, `retrievability`) está marcada como *deprecated* na v6; a versão fica fixada em 6.0.0 e testes conferem as estabilidades iniciais com a documentação.
+- **Não implementado ainda:** módulos 3–6 completos, avaliações de 7–90 dias com bancos maiores, testes de transferência, PWA/offline, relatórios. Ver roadmap abaixo.
 - Se a página for fechada no meio de um exercício, retomar exige confirmação e recomeça aquele exercício.
 
 ## Roadmap
 - **Fase 1 (MVP) — feito neste commit:** interface, avaliação inicial, módulo de lógica (parcial), explicações progressivas, temporizador com inatividade, persistência, painel, estatísticas básicas, exportação/importação, e2e e acessibilidade (axe).
-- **Fase 2:** módulos 2–6, revisão espaçada (avaliar FSRS após ler a documentação; adaptar a raciocínio), histórico detalhado.
+- **Fase 2:** *revisão espaçada com FSRS — feita* (ver limitações). Pendentes: módulos 3–6 e histórico detalhado.
 - **Fase 3:** avaliações periódicas com mais formas equivalentes, testes de transferência, análise estatística, domínio completo.
 - **Fase 4:** PWA e offline (service worker), relatórios, personalização, otimizações de acessibilidade.

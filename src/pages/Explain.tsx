@@ -3,7 +3,7 @@ import { DEFAULT_MASTERY, MIN_SAMPLE } from '../domain/metrics'
 const METRICS = [
   { name: 'Precisão', formula: 'respostas corretas ÷ respostas válidas × 100', limits: 'Alternativas válidas (outra regra lógica) contam como corretas. Depende do nível dos exercícios.' },
   { name: 'Resolução independente', formula: 'exercícios corretos na 1ª tentativa e sem dicas ÷ exercícios concluídos × 100', limits: 'Desistir (ver explicação) conta como concluído, não independente.' },
-  { name: 'Retenção observada', formula: 'revisões corretas sem consulta ÷ total de revisões válidas × 100', limits: 'Só existe após as revisões espaçadas (Fase 2).' },
+  { name: 'Retenção observada', formula: 'revisões corretas sem consulta ÷ total de revisões válidas × 100', limits: 'Só existe depois de você fazer sessões de revisão (aba Revisões).' },
   { name: 'Evolução individual', formula: 'avaliação atual − avaliação inicial (diferença absoluta em p.p.; percentual só se a base > 0)', limits: 'Formas A/B são equivalentes por construção, não calibradas. Poucos itens por área.' },
   { name: 'Tempo de resolução', formula: 'mediana do tempo ativo por competência × nível', limits: 'Nunca compare níveis diferentes. Rapidez não é inteligência.' },
   { name: 'Domínio', formula: `≥ ${DEFAULT_MASTERY.minNovelExercises} exercícios novos no nível ≥ ${DEFAULT_MASTERY.minLevel} com ≥ ${DEFAULT_MASTERY.minAccuracy}% sem dicas e ≥ ${DEFAULT_MASTERY.minDelayedReviewsCorrect} revisões corretas após ≥ ${DEFAULT_MASTERY.minDaysBetween} dias`, limits: 'Critérios são hipótese de implementação, ainda não validados.' },
@@ -31,7 +31,7 @@ export default function Explain() {
       </section>
       <section className="card space-y-1 text-sm">
         <h2 className="font-semibold">Aprender, memorizar, aplicar, explicar, transferir</h2>
-        <p>São habilidades distintas: aprender uma regra (entender), memorizá-la (lembrar depois), aplicá-la (resolver), explicá-la (justificar) e transferi-la (usar em contexto novo). O app registra cada uma separadamente quando possível (explicação opcional; revisão na Fase 2; transferência na Fase 3).</p>
+        <p>São habilidades distintas: aprender uma regra (entender), memorizá-la (lembrar depois), aplicá-la (resolver), explicá-la (justificar) e transferi-la (usar em contexto novo). O app registra cada uma separadamente quando possível (explicação opcional; revisão espaçada na aba Revisões; transferência na Fase 3).</p>
       </section>
       <section className="card space-y-1 text-sm">
         <h2 className="font-semibold">Sequências curtas e mais de uma regra</h2>

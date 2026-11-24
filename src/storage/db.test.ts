@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { applyReview } from '../domain/review'
 import type { Attempt, SessionRecord } from '../domain/types'
 import {
-  addAttempt, allAttempts, allSessions, clearActive, eraseAllData, exportData, importData, loadActive,
+  addAttempt, allAttempts, allReviews, allSessions, saveReview, clearActive, eraseAllData, exportData, importData, loadActive,
   loadSettings, parseBackup, saveActive, saveSession, saveSettings, DEFAULT_SETTINGS,
 } from './db'
 
@@ -65,5 +66,52 @@ describe('exportação e importação', () => {
     await addAttempt(attempt())
     expect(parseBackup(text).ok).toBe(false)
     expect(await allAttempts()).toHaveLength(1)
+  })
+})
+
+describe('Fase 2: revisão espaçada no banco (v2)', () => {
+  const rev = applyReview('logica.sequencias', undefined, 'good', Date.UTC(2026, 0, 1))
+
+  it('migra um banco v1 com dados sem perdê-los e cria a store reviews', async () => {
+    await eraseAllData()
+    const { openDB } = await import('idb')
+    const v1 = await openDB('neuro100', 1, {
+      upgrade(db) {
+        const att = db.createObjectStore('attempts', { keyPath: 'id', autoIncrement: true })
+        att.createIndex('by-session', 'sessionId')
+        att.createIndex('by-competency', 'competency')
+        db.createObjectStore('sessions', { keyPath: 'id' })
+        db.createObjectStore('assessments', { keyPath: 'id' })
+        db.createObjectStore('settings', { keyPath: 'id' })
+        db.createObjectStore('active', { keyPath: 'id' })
+      },
+    })
+    await v1.add('attempts', attempt({ exerciseId: 'antigo' }))
+    await v1.put('sessions', session)
+    v1.close()
+
+    expect(await allAttempts()).toHaveLength(1)
+    expect((await allAttempts())[0].exerciseId).toBe('antigo')
+    expect(await allSessions()).toHaveLength(1)
+    expect(await allReviews()).toEqual([])
+    await saveReview(rev)
+    expect(await allReviews()).toEqual([rev])
+  })
+
+  it('exporta e importa os cartões de revisão (ida e volta)', async () => {
+    await saveReview(rev)
+    const parsed = parseBackup(JSON.stringify(await exportData()))
+    expect(parsed.ok).toBe(true)
+    await eraseAllData()
+    if (parsed.ok) await importData(parsed.data)
+    expect(await allReviews()).toEqual([rev])
+  })
+
+  it('aceita backup v1 (sem reviews) e rejeita cartão inválido', async () => {
+    const v1 = { ...(await exportData()), version: 1 } as Record<string, unknown>
+    delete v1.reviews
+    expect(parseBackup(JSON.stringify(v1)).ok).toBe(true)
+    const bad = { ...(await exportData()), reviews: [{ competency: 'x' }] }
+    expect(parseBackup(JSON.stringify(bad)).ok).toBe(false)
   })
 })

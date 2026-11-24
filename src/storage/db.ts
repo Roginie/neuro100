@@ -1,11 +1,12 @@
 import { deleteDB, openDB, type DBSchema, type IDBPDatabase } from 'idb'
 import { DEFAULT_ADAPTIVE } from '../domain/adaptive'
+import { validReviewState, type ReviewState } from '../domain/review'
 import type { AssessmentResult, Attempt, SessionRecord, Settings } from '../domain/types'
 
 export const DB_NAME = 'neuro100'
-export const DB_VERSION = 1
+export const DB_VERSION = 2
 export const EXPORT_FORMAT = 'neuro100-backup'
-export const EXPORT_VERSION = 1
+export const EXPORT_VERSION = 2
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'sistema',
@@ -34,20 +35,25 @@ interface Schema extends DBSchema {
   assessments: { key: string; value: AssessmentResult }
   settings: { key: string; value: Settings & { id: 'settings' } }
   active: { key: string; value: ActiveSessionState }
+  reviews: { key: string; value: ReviewState }
 }
 
 let dbp: Promise<IDBPDatabase<Schema>> | null = null
 
 export function getDb() {
   dbp ??= openDB<Schema>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      const att = db.createObjectStore('attempts', { keyPath: 'id', autoIncrement: true })
-      att.createIndex('by-session', 'sessionId')
-      att.createIndex('by-competency', 'competency')
-      db.createObjectStore('sessions', { keyPath: 'id' })
-      db.createObjectStore('assessments', { keyPath: 'id' })
-      db.createObjectStore('settings', { keyPath: 'id' })
-      db.createObjectStore('active', { keyPath: 'id' })
+    upgrade(db, oldVersion) {
+      if (oldVersion < 1) {
+        const att = db.createObjectStore('attempts', { keyPath: 'id', autoIncrement: true })
+        att.createIndex('by-session', 'sessionId')
+        att.createIndex('by-competency', 'competency')
+        db.createObjectStore('sessions', { keyPath: 'id' })
+        db.createObjectStore('assessments', { keyPath: 'id' })
+        db.createObjectStore('settings', { keyPath: 'id' })
+        db.createObjectStore('active', { keyPath: 'id' })
+      }
+      // v2 (Fase 2): estado de revisão espaçada, um registro por competência. Dados da v1 são preservados.
+      if (oldVersion < 2) db.createObjectStore('reviews', { keyPath: 'competency' })
     },
   })
   return dbp
@@ -66,6 +72,12 @@ export async function allAttempts() {
 }
 export async function saveSession(s: SessionRecord) {
   await (await getDb()).put('sessions', s)
+}
+export async function saveReview(r: ReviewState) {
+  await (await getDb()).put('reviews', r)
+}
+export async function allReviews() {
+  return (await getDb()).getAll('reviews')
 }
 export async function allSessions() {
   return (await getDb()).getAll('sessions')
@@ -109,6 +121,8 @@ export interface BackupFile {
   attempts: Attempt[]
   sessions: SessionRecord[]
   assessments: AssessmentResult[]
+  /** presente a partir da versão 2 do backup */
+  reviews?: ReviewState[]
   settings: Settings
 }
 
@@ -120,6 +134,7 @@ export async function exportData(now = Date.now()): Promise<BackupFile> {
     attempts: await allAttempts(),
     sessions: await allSessions(),
     assessments: await allAssessments(),
+    reviews: await allReviews(),
     settings: await loadSettings(),
   }
 }
@@ -170,6 +185,8 @@ export function parseBackup(text: string): ParseResult {
   if (!(raw.attempts as unknown[]).every(validAttempt)) return { ok: false, error: 'Há tentativas com dados inválidos.' }
   if (!(raw.sessions as unknown[]).every(validSession)) return { ok: false, error: 'Há sessões com dados inválidos.' }
   if (!(raw.assessments as unknown[]).every(validAssessment)) return { ok: false, error: 'Há avaliações com dados inválidos.' }
+  if (raw.reviews !== undefined && (!Array.isArray(raw.reviews) || !raw.reviews.every(validReviewState)))
+    return { ok: false, error: 'Há cartões de revisão com dados inválidos.' }
   if (!isObj(raw.settings)) return { ok: false, error: 'Configurações ausentes.' }
   return { ok: true, data: raw as unknown as BackupFile }
 }
@@ -177,12 +194,13 @@ export function parseBackup(text: string): ParseResult {
 /** Substitui todos os dados locais pelo conteúdo do backup (atômico por transação). */
 export async function importData(data: BackupFile) {
   const db = await getDb()
-  const tx = db.transaction(['attempts', 'sessions', 'assessments', 'settings', 'active'], 'readwrite')
+  const tx = db.transaction(['attempts', 'sessions', 'assessments', 'settings', 'active', 'reviews'], 'readwrite')
   await Promise.all([
     tx.objectStore('attempts').clear(),
     tx.objectStore('sessions').clear(),
     tx.objectStore('assessments').clear(),
     tx.objectStore('active').clear(),
+    tx.objectStore('reviews').clear(),
   ])
   for (const a of data.attempts) {
     const { id: _id, ...rest } = a
@@ -190,6 +208,7 @@ export async function importData(data: BackupFile) {
   }
   for (const s of data.sessions) await tx.objectStore('sessions').put(s)
   for (const s of data.assessments) await tx.objectStore('assessments').put(s)
+  for (const r of data.reviews ?? []) await tx.objectStore('reviews').put(r)
   await tx.objectStore('settings').put({ ...DEFAULT_SETTINGS, ...data.settings, id: 'settings' })
   await tx.done
 }

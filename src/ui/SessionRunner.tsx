@@ -2,16 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { decideLevel, type Outcome } from '../domain/adaptive'
 import { BANK_VERSION, COMPETENCY_LABEL, findExerciseById, practiceExercise } from '../domain/bank'
+import { applyReview, ratingFor, type ReviewState } from '../domain/review'
 import { gradeAnswer } from '../domain/sequences'
 import { SessionClock } from '../domain/sessionClock'
 import type { AssessmentResult, Attempt, Competency, Exercise, Level, SessionRecord } from '../domain/types'
-import { addAttempt, clearActive, saveActive, saveAssessment, saveSession, type ActiveSessionState } from '../storage/db'
+import { addAttempt, clearActive, saveActive, saveAssessment, saveReview, saveSession, type ActiveSessionState } from '../storage/db'
 import { useData } from '../store'
 import { LESSONS } from './lessons'
 
 export type RunnerMode =
   | { type: 'assessment'; items: Exercise[] }
-  | { type: 'practice'; competencies: Competency[] }
+  | { type: 'practice'; competencies: Competency[]; review?: boolean }
 
 interface Props {
   mode: RunnerMode
@@ -24,6 +25,8 @@ interface AdaptiveMeta {
   seed: number
   rot: number
   competencies?: Competency[]
+  /** sessão de revisão espaçada (tentativas gravadas como 'review') */
+  review?: boolean
 }
 
 const fmt = (ms: number) => {
@@ -34,7 +37,7 @@ const fmt = (ms: number) => {
 type Phase = 'intro' | 'running' | 'summary'
 
 export default function SessionRunner({ mode, resume }: Props) {
-  const { settings, refresh, assessments } = useData()
+  const { settings, refresh, assessments, reviews } = useData()
   const isAssessment = mode.type === 'assessment'
 
   const clock = useRef<SessionClock>(null as unknown as SessionClock)
@@ -67,8 +70,12 @@ export default function SessionRunner({ mode, resume }: Props) {
       seed: Math.floor(Math.random() * 1e6),
       rot: 0,
       competencies: mode.type === 'practice' ? mode.competencies : undefined,
+      review: mode.type === 'practice' ? mode.review : undefined,
     },
   )
+  const isReview = !isAssessment && !!meta.current.review
+  // Cartões de revisão: parte do que está salvo e acompanha as atualizações desta sessão.
+  const reviewState = useRef<Map<string, ReviewState>>(new Map(reviews.map((r) => [r.competency, r])))
   const [exercise, setExercise] = useState<Exercise | null>(null)
   const [answer, setAnswer] = useState('')
   const [reasoning, setReasoning] = useState('')
@@ -176,7 +183,7 @@ export default function SessionRunner({ mode, resume }: Props) {
       competency: exercise.competency,
       subcompetency: exercise.subcompetency,
       level: exercise.level,
-      kind: isAssessment ? 'assessment' : 'practice',
+      kind: isAssessment ? 'assessment' : isReview ? 'review' : 'practice',
       answer: given,
       verdict,
       hintsUsed,
@@ -187,8 +194,15 @@ export default function SessionRunner({ mode, resume }: Props) {
     })
   }
 
-  const finishExercise = async (given: string, verdict: Attempt['verdict'], hintsUsed: number) => {
+  const finishExercise = async (given: string, verdict: Attempt['verdict'], hintsUsed: number, attemptNumber: number) => {
     if (!exercise) return
+    if (!isAssessment) {
+      // Um exercício concluído = uma revisão da competência (ver REVIEW em domain/review.ts).
+      const prev = reviewState.current.get(exercise.competency)
+      const next = applyReview(exercise.competency, prev, ratingFor({ correct: verdict !== 'incorrect', hintsUsed, attemptNumber }), Date.now())
+      reviewState.current.set(exercise.competency, next)
+      await saveReview(next)
+    }
     setDone((d) => [...d, { ex: exercise, given, verdict }])
     const nextQueue = queue.slice(1)
     if (!isAssessment) {
@@ -221,13 +235,13 @@ export default function SessionRunner({ mode, resume }: Props) {
     setTries(n)
     if (isAssessment) {
       await recordAttempt(value, g.verdict, 0, 1)
-      await finishExercise(value, g.verdict, 0)
+      await finishExercise(value, g.verdict, 0, 1)
       return
     }
     if (g.verdict !== 'incorrect') {
       await recordAttempt(value, g.verdict, hints, n)
       setFeedback({ tone: 'ok', text: g.note ? `Correto — ${g.note}` : 'Correto.' })
-      await finishExercise(value, g.verdict, hints)
+      await finishExercise(value, g.verdict, hints, n)
     } else {
       await recordAttempt(value, 'incorrect', hints, n)
       if (hints < exercise.hints.length) {
@@ -244,7 +258,7 @@ export default function SessionRunner({ mode, resume }: Props) {
     if (!exercise) return
     await recordAttempt('(explicação completa)', 'incorrect', hints, tries + 1)
     setFeedback({ tone: 'bad', text: 'Sem problema. Leia a explicação e, depois, siga para o próximo.' })
-    await finishExercise('(explicação completa)', 'incorrect', hints)
+    await finishExercise('(explicação completa)', 'incorrect', hints, tries + 1)
   }
 
   const askHint = () => {
@@ -340,6 +354,17 @@ export default function SessionRunner({ mode, resume }: Props) {
         <div className="card space-y-1">
           <p>Respostas corretas: <b>{correct}</b> de <b>{done.length}</b></p>
           <p>Tempo ativo: <b>{fmt(sessionRef.current.activeMs)}</b> · Pausado: {fmt(sessionRef.current.pausedMs)}</p>
+          {!isAssessment && [...new Set(done.map((d) => d.ex.competency))].length > 0 && (
+            <div data-testid="next-reviews">
+              <p className="font-semibold">Próximas revisões agendadas</p>
+              <ul className="ml-5 list-disc">
+                {[...new Set(done.map((d) => d.ex.competency))].map((c) => {
+                  const r = reviewState.current.get(c)
+                  return r && <li key={c}>{COMPETENCY_LABEL[c]}: {new Date(r.card.due).toLocaleDateString('pt-BR')}</li>
+                })}
+              </ul>
+            </div>
+          )}
           {isAssessment && !savedResult && <p className="font-semibold">Avaliação incompleta: não foi registrada como linha de base.</p>}
           {savedResult && (
             <>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { COMPETENCY_LABEL } from '../domain/bank'
 import type { Competency, Settings } from '../domain/types'
 import { loadActive, clearActive, type ActiveSessionState } from '../storage/db'
@@ -14,15 +15,46 @@ export default function Train() {
   const [resume, setResume] = useState<ActiveSessionState | null | undefined>(undefined)
   const [selected, setSelected] = useState<Competency[]>(['logica.sequencias'])
   const [started, setStarted] = useState(false)
+  const [params] = useSearchParams()
+  const reviewComps = (params.get('revisar')?.split(',') ?? []).filter((c): c is Competency => c in COMPETENCY_LABEL)
+  const [reviewStarted, setReviewStarted] = useState(false)
+  // há sessão em andamento e foi pedida uma revisão: a usuária escolhe, nada é descartado sem pedir
+  const [conflict, setConflict] = useState<'ask' | 'resume' | 'discard'>('ask')
 
   useEffect(() => {
     void loadActive().then((a) => setResume(a && a.session.kind === 'practice' ? a : null))
   }, [])
+  useEffect(() => {
+    if (reviewComps.length > 0 && !reviewStarted && (resume === null || conflict === 'discard')) {
+      void clearActive().then(refresh).then(() => {
+        setResume(null)
+        setReviewStarted(true)
+      })
+    }
+  }, [resume, reviewComps.length, reviewStarted, conflict, refresh])
   if (!ready || resume === undefined) return <p>Carregando…</p>
+  if (reviewComps.length > 0 && reviewStarted) {
+    return <SessionRunner key="revisao" mode={{ type: 'practice', competencies: reviewComps, review: true }} />
+  }
+  if (reviewComps.length > 0 && resume && conflict === 'ask') {
+    return (
+      <div className="card space-y-3" data-testid="review-conflict">
+        <h1 className="text-xl font-bold">Você tem uma sessão em andamento</h1>
+        <p>Para fazer a revisão agora, é preciso encerrar a sessão em andamento. O que já foi respondido nela continua salvo; só o restante da fila é descartado.</p>
+        <div className="flex flex-wrap gap-2">
+          <button className="btn" onClick={() => setConflict('discard')}>Descartar a sessão e revisar</button>
+          <button className="btn" onClick={() => setConflict('resume')}>Retomar a sessão em andamento</button>
+        </div>
+      </div>
+    )
+  }
+  // descartando a sessão antiga: não renderizar o runner com ela nem por um instante
+  if (reviewComps.length > 0 && (!resume || conflict === 'discard')) return <p>Preparando revisão…</p>
 
   if (started || resume) {
     const comps = (!started && (resume?.meta as { competencies?: Competency[] } | undefined)?.competencies) || selected
-    return <SessionRunner mode={{ type: 'practice', competencies: comps }} resume={resume && !started ? resume : undefined} />
+    const isRev = !!(resume && !started && (resume.meta as { review?: boolean } | undefined)?.review)
+    return <SessionRunner mode={{ type: 'practice', competencies: comps, review: isRev }} resume={resume && !started ? resume : undefined} />
   }
 
   const toggle = (c: Competency) => setSelected((s) => (s.includes(c) ? s.filter((x) => x !== c) : [...s, c]))

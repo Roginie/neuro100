@@ -18,7 +18,7 @@ export default function Library() {
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Biblioteca de competências</h1>
       <p className="muted">
-        Critérios de domínio atuais (hipótese de implementação, ainda não validada): ≥ {DEFAULT_MASTERY.minNovelExercises} exercícios novos no nível ≥ {DEFAULT_MASTERY.minLevel}, ≥ {DEFAULT_MASTERY.minAccuracy}% de precisão sem dicas e ≥ {DEFAULT_MASTERY.minDelayedReviewsCorrect} revisões corretas após ≥ {DEFAULT_MASTERY.minDaysBetween} dias. As revisões espaçadas chegam na Fase 2: até lá, nenhuma competência pode atingir 100%.
+        Critérios de domínio atuais (hipótese de implementação, ainda não validada): ≥ {DEFAULT_MASTERY.minNovelExercises} exercícios novos no nível ≥ {DEFAULT_MASTERY.minLevel}, ≥ {DEFAULT_MASTERY.minAccuracy}% de precisão sem dicas e ≥ {DEFAULT_MASTERY.minDelayedReviewsCorrect} revisões corretas após ≥ {DEFAULT_MASTERY.minDaysBetween} dias. As revisões vêm da aba Revisões: sem elas, nenhuma competência pode atingir 100%.
       </p>
       {MODULES.map((m) => (
         <section key={m.name} className="space-y-2">
